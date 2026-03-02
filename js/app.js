@@ -129,7 +129,17 @@
           chip.innerHTML = `
             ${ev.startTime ? `<span class="event-time">${ev.startTime}${ev.endTime ? ' – ' + ev.endTime : ''}</span>` : ''}
             ${escHtml(ev.title)}
+            <span class="event-meta">
+              ${ev.period && ev.period !== 'none' ? `<span class="event-period">${ev.period === 'daily' ? '每天' : ev.period === 'weekly' ? '每周' : ev.period === 'monthly' ? '每月' : ''}</span>` : ''}
+              ${ev.repeat && ev.repeat > 1 ? `<span class="event-repeat">${ev.doneCount || 0}/${ev.repeat}次</span>` : ''}
+              <span class="event-status ${ev.done ? 'done' : ''}">${ev.done ? '已完成' : '未完成'}</span>
+            </span>
+            <button class="btn btn-success btn-done" data-id="${ev.id}" ${ev.done ? 'disabled' : ''}>完成</button>
           `;
+          chip.querySelector('.btn-done').addEventListener('click', function(e) {
+            e.stopPropagation();
+            markScheduleDone(ev.id);
+          });
           chip.addEventListener('click', () => openModal(ev.id));
           eventsEl.appendChild(chip);
         });
@@ -173,12 +183,39 @@
             ${s.startTime ? `<span>🕐 ${s.startTime}${s.endTime ? ' – ' + s.endTime : ''}</span>` : ''}
             <span class="plan-tag cat-label cat-${s.category}">${CAT_LABELS[s.category] || s.category}</span>
             <span class="plan-tag pri-${s.priority}">${PRI_LABELS[s.priority] || s.priority}</span>
+            ${s.period && s.period !== 'none' ? `<span class="plan-tag period">${s.period === 'daily' ? '每天' : s.period === 'weekly' ? '每周' : s.period === 'monthly' ? '每月' : ''}</span>` : ''}
+            ${s.repeat && s.repeat > 1 ? `<span class="plan-tag repeat">${s.doneCount || 0}/${s.repeat}次</span>` : ''}
+            <span class="plan-tag status ${s.done ? 'done' : ''}">${s.done ? '已完成' : '未完成'}</span>
           </div>
+          <button class="btn btn-success btn-done" data-id="${s.id}" ${s.done ? 'disabled' : ''}>完成</button>
         </div>
       `;
+      card.querySelector('.btn-done').addEventListener('click', function(e) {
+        e.stopPropagation();
+        markScheduleDone(s.id);
+      });
       card.addEventListener('click', () => openModal(s.id));
       list.appendChild(card);
     });
+  }
+  // 标记日程完成
+  function markScheduleDone(id) {
+    const list = loadSchedules();
+    const idx = list.findIndex(s => s.id === id);
+    if (idx === -1) return;
+    const s = list[idx];
+    if (s.repeat && s.repeat > 1) {
+      s.doneCount = (s.doneCount || 0) + 1;
+      if (s.doneCount >= s.repeat) {
+        s.done = true;
+      }
+    } else {
+      s.done = true;
+    }
+    saveSchedules(list);
+    renderWeekly();
+    renderFuture();
+    showToast('已标记为完成');
   }
 
   // ── 添加日程表单 ──────────────────────────────────────
@@ -192,6 +229,8 @@
   addForm.addEventListener('submit', function (e) {
     e.preventDefault();
 
+
+    // 新增：周期、长期、完成状态、完成次数
     const item = {
       title:     addForm.scheduleTitle.value.trim(),
       date:      addForm.scheduleDate.value,
@@ -200,6 +239,11 @@
       category:  addForm.scheduleCategory.value,
       priority:  addForm.schedulePriority.value,
       note:      addForm.scheduleNote.value.trim(),
+      // 新增字段
+      period:    addForm.schedulePeriod ? addForm.schedulePeriod.value : '', // 周期类型（如 daily/weekly/monthly/none）
+      repeat:    addForm.scheduleRepeat ? parseInt(addForm.scheduleRepeat.value, 10) || 1 : 1, // 长期性需完成次数
+      doneCount: 0, // 已完成次数
+      done:      false // 是否已完成
     };
 
     if (!item.title || !item.date) {

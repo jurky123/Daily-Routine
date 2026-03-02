@@ -1,3 +1,13 @@
+/* 小型完成按钮 */
+.btn-done {
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  margin-left: 8px;
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
 /* ===== 全局重置与变量 ===== */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -347,6 +357,14 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+}
+
+/* 需完成次数输入框宽度优化 */
+#scheduleRepeat {
+  max-width: 120px;
+  min-width: 60px;
+  display: inline-block;
+}
 }
 
 .form-actions {

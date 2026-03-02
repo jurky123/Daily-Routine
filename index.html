@@ -50,6 +50,21 @@
         <h2>添加日程</h2>
       </div>
       <form class="add-form" id="addForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="schedulePeriod">周期类型</label>
+            <select id="schedulePeriod">
+              <option value="none" selected>无</option>
+              <option value="daily">每天</option>
+              <option value="weekly">每周</option>
+              <option value="monthly">每月</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="scheduleRepeat">需完成次数（长期性）</label>
+            <input type="number" id="scheduleRepeat" min="1" max="999" value="1" />
+          </div>
+        </div>
         <div class="form-group">
           <label for="scheduleTitle">标题 <span class="required">*</span></label>
           <input type="text" id="scheduleTitle" placeholder="请输入日程标题" required />
