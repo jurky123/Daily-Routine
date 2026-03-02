@@ -115,13 +115,13 @@
   background: #f5f8ff;
 }
 /* 小型完成按钮 */
-.btn-done {
-  padding: 3px 10px;
-  font-size: 0.78rem;
-  border-radius: 6px;
-  margin-left: 8px;
-  margin-top: 2px;
-  line-height: 1.2;
+.btn.btn-done {
+  padding: 3px 10px !important;
+  font-size: 0.78rem !important;
+  border-radius: 6px !important;
+  margin-left: 6px !important;
+  margin-top: 2px !important;
+  line-height: 1.2 !important;
 }
 
 /* ===== 全局重置与变量 ===== */
