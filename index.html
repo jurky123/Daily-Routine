@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>日程管理系统</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <header class="header">
+    <div class="header-inner">
+      <h1 class="logo">📅 日程管理</h1>
+      <nav class="nav">
+        <button class="nav-btn active" data-view="weekly">本周日程</button>
+        <button class="nav-btn" data-view="future">未来计划</button>
+        <button class="nav-btn" data-view="add">添加日程</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- 本周日程视图 -->
+    <section id="view-weekly" class="view active">
+      <div class="section-header">
+        <h2>本周日程表</h2>
+        <span class="week-label" id="weekLabel"></span>
+      </div>
+      <div class="weekly-grid" id="weeklyGrid">
+        <!-- 由 JS 动态生成 -->
+      </div>
+    </section>
+
+    <!-- 未来计划视图 -->
+    <section id="view-future" class="view">
+      <div class="section-header">
+        <h2>未来计划</h2>
+        <span class="badge" id="futureCount">0 项计划</span>
+      </div>
+      <div class="plan-list" id="futureList">
+        <!-- 由 JS 动态生成 -->
+      </div>
+      <div class="empty-tip" id="futureEmpty">暂无未来计划，去添加一个吧！</div>
+    </section>
+
+    <!-- 添加日程视图 -->
+    <section id="view-add" class="view">
+      <div class="section-header">
+        <h2>添加日程</h2>
+      </div>
+      <form class="add-form" id="addForm">
+        <div class="form-group">
+          <label for="scheduleTitle">标题 <span class="required">*</span></label>
+          <input type="text" id="scheduleTitle" placeholder="请输入日程标题" required />
+        </div>
+        <div class="form-group">
+          <label for="scheduleDate">日期 <span class="required">*</span></label>
+          <input type="date" id="scheduleDate" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="scheduleStart">开始时间</label>
+            <input type="time" id="scheduleStart" />
+          </div>
+          <div class="form-group">
+            <label for="scheduleEnd">结束时间</label>
+            <input type="time" id="scheduleEnd" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="scheduleCategory">分类</label>
+          <select id="scheduleCategory">
+            <option value="work">工作</option>
+            <option value="study">学习</option>
+            <option value="life">生活</option>
+            <option value="health">健康</option>
+            <option value="social">社交</option>
+            <option value="other">其他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="schedulePriority">优先级</label>
+          <select id="schedulePriority">
+            <option value="low">低</option>
+            <option value="medium" selected>中</option>
+            <option value="high">高</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="scheduleNote">备注</label>
+          <textarea id="scheduleNote" rows="3" placeholder="可在此填写详细说明..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="clearFormBtn">清空</button>
+          <button type="submit" class="btn btn-primary">保存日程</button>
+        </div>
+      </form>
+    </section>
+
+  </main>
+
+  <!-- 计划详情弹窗 -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="detailModal">
+      <div class="modal-header">
+        <h3 id="modalTitle">日程详情</h3>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="modalDelete">删除</button>
+        <button class="btn btn-primary" id="modalEdit">编辑</button>
+        <button class="btn btn-secondary" id="modalCloseBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 提示消息 -->
+  <div class="toast" id="toast"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
