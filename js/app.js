@@ -1,3 +1,112 @@
+      // 设置弹窗逻辑
+      document.addEventListener('DOMContentLoaded', function() {
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsOverlay = document.getElementById('settingsOverlay');
+        const settingsClose = document.getElementById('settingsClose');
+        // 显示弹窗
+        if (settingsBtn && settingsOverlay) {
+          settingsBtn.addEventListener('click', function() {
+            console.log('[调试] 设置按钮被点击');
+            settingsOverlay.classList.add('open');
+            console.log('[调试] 设置弹窗已添加open类');
+          });
+        } else {
+          console.log('[调试] 未找到settingsBtn或settingsOverlay', settingsBtn, settingsOverlay);
+        }
+        // 关闭弹窗
+        if (settingsClose && settingsOverlay) {
+          settingsClose.addEventListener('click', function() {
+            settingsOverlay.classList.remove('open');
+            console.log('[调试] 设置弹窗已关闭');
+          });
+        } else {
+          console.log('[调试] 未找到settingsClose或settingsOverlay', settingsClose, settingsOverlay);
+        }
+        if (settingsOverlay) {
+          settingsOverlay.addEventListener('click', function(e) {
+            if (e.target === settingsOverlay) {
+              settingsOverlay.classList.remove('open');
+              console.log('[调试] 点击遮罩关闭设置弹窗');
+            }
+          });
+        }
+      });
+    // 批量导入日程解析
+    function parseBatchImport(text) {
+      // 每行格式：日期 [开始-结束] 标题 分类 优先级 [备注]
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const result = [];
+      lines.forEach(line => {
+        // 正则匹配：2026-03-05 09:00-10:00 会议 工作 高 需准备材料
+        const m = line.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})-(\d{2}:\d{2})\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s*(.*)$/);
+        if (m) {
+          result.push({
+            date: m[1],
+            startTime: m[2],
+            endTime: m[3],
+            title: m[4],
+            category: m[5],
+            priority: m[6],
+            note: m[7] || '',
+            period: 'none',
+            repeat: 1,
+            doneCount: 0,
+            done: false
+          });
+          return;
+        }
+        // 允许无时间：2026-03-05 会议 工作 高 备注
+        const m2 = line.match(/^(\d{4}-\d{2}-\d{2})\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s*(.*)$/);
+        if (m2) {
+          result.push({
+            date: m2[1],
+            startTime: '',
+            endTime: '',
+            title: m2[2],
+            category: m2[3],
+            priority: m2[4],
+            note: m2[5] || '',
+            period: 'none',
+            repeat: 1,
+            doneCount: 0,
+            done: false
+          });
+        }
+      });
+      return result;
+    }
+
+    // 批量导入按钮事件
+    document.addEventListener('DOMContentLoaded', function() {
+      const btn = document.getElementById('batchImportBtn');
+      if (btn) {
+        btn.addEventListener('click', function() {
+          const textarea = document.getElementById('batchImport');
+          if (!textarea) return;
+          const items = parseBatchImport(textarea.value);
+          if (items.length === 0) {
+            alert('未识别到有效日程，请检查格式！');
+            return;
+          }
+          items.forEach(addSchedule);
+          textarea.value = '';
+          showToast('批量导入成功');
+          renderWeekly();
+          renderFuture();
+        });
+      }
+    });
+  // 获取指定天数的日期数组
+  function getDaysRange(startDate, days) {
+    const arr = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
+      arr.push(d);
+    }
+    return arr;
+  }
+
 /* ===========================
    日程管理系统 — 核心逻辑
    =========================== */
@@ -90,25 +199,71 @@
 
   // ── 本周日程渲染 ──────────────────────────────────────
   function renderWeekly() {
-    const weekDays  = getWeekDays();
+    // 获取选择的范围
+    const rangeSel = document.getElementById('rangeSelect');
+    let days = 7;
+    let startDate = today();
+    let label = '';
+    if (rangeSel) {
+      switch (rangeSel.value) {
+        case 'week':
+          // 本周一到周日
+          const d = today();
+          const dow = d.getDay();
+          startDate = new Date(d);
+          startDate.setDate(d.getDate() - ((dow + 6) % 7));
+          days = 7;
+          label = `${startDate.getMonth()+1}月${startDate.getDate()}日 — `;
+          const endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 6);
+          label += `${endDate.getMonth()+1}月${endDate.getDate()}日`;
+          break;
+        case 'nextweek':
+          // 下周一到下周日
+          const td = today();
+          const tdow = td.getDay();
+          startDate = new Date(td);
+          startDate.setDate(td.getDate() - ((tdow + 6) % 7) + 7);
+          days = 7;
+          label = `${startDate.getMonth()+1}月${startDate.getDate()}日 — `;
+          const endDate2 = new Date(startDate);
+          endDate2.setDate(startDate.getDate() + 6);
+          label += `${endDate2.getMonth()+1}月${endDate2.getDate()}日`;
+          break;
+        case '2weeks':
+          // 本周一起14天
+          const td2 = today();
+          const tdow2 = td2.getDay();
+          startDate = new Date(td2);
+          startDate.setDate(td2.getDate() - ((tdow2 + 6) % 7));
+          days = 14;
+          const endDate3 = new Date(startDate);
+          endDate3.setDate(startDate.getDate() + 13);
+          label = `${startDate.getMonth()+1}月${startDate.getDate()}日 — ${endDate3.getMonth()+1}月${endDate3.getDate()}日`;
+          break;
+        case '30days':
+          // 今天起30天
+          startDate = today();
+          days = 30;
+          const endDate4 = new Date(startDate);
+          endDate4.setDate(startDate.getDate() + 29);
+          label = `${startDate.getMonth()+1}月${startDate.getDate()}日 — ${endDate4.getMonth()+1}月${endDate4.getDate()}日`;
+          break;
+      }
+    }
+    const daysArr = getDaysRange(startDate, days);
     const allSched  = loadSchedules();
     const todayStr  = toDateStr(today());
     const grid      = document.getElementById('weeklyGrid');
     const weekLabel = document.getElementById('weekLabel');
-
-    // 标题：起止日期
-    weekLabel.textContent = `${weekDays[0].getMonth()+1}月${weekDays[0].getDate()}日 — ${weekDays[6].getMonth()+1}月${weekDays[6].getDate()}日`;
-
+    weekLabel.textContent = label;
     grid.innerHTML = '';
-
-    weekDays.forEach(date => {
+    daysArr.forEach(date => {
       const dateStr = toDateStr(date);
       const isToday = dateStr === todayStr;
       const events  = allSched.filter(s => s.date === dateStr);
-
       const col = document.createElement('div');
       col.className = 'day-column' + (isToday ? ' today' : '');
-
       col.innerHTML = `
         <div class="day-header">
           <div class="day-name">${DAY_NAMES[date.getDay()]}</div>
@@ -116,9 +271,7 @@
         </div>
         <div class="day-events" id="events-${dateStr}"></div>
       `;
-
       grid.appendChild(col);
-
       const eventsEl = col.querySelector('.day-events');
       if (events.length === 0) {
         eventsEl.innerHTML = '<span class="no-events-msg">无日程</span>';
@@ -126,7 +279,16 @@
         events.forEach(ev => {
           const chip = document.createElement('div');
           chip.className = `event-chip cat-${ev.category}`;
+          let typeLabel = '';
+          if (ev.repeat && ev.repeat > 1) {
+            typeLabel = '<span class="type-tag type-long">长期</span>';
+          } else if (ev.period && ev.period !== 'none') {
+            typeLabel = '<span class="type-tag type-cycle">周期</span>';
+          } else {
+            typeLabel = '<span class="type-tag type-temp">临时</span>';
+          }
           chip.innerHTML = `
+            ${typeLabel}
             ${ev.startTime ? `<span class="event-time">${ev.startTime}${ev.endTime ? ' – ' + ev.endTime : ''}</span>` : ''}
             ${escHtml(ev.title)}
             <span class="event-meta">
@@ -143,6 +305,13 @@
           chip.addEventListener('click', () => openModal(ev.id));
           eventsEl.appendChild(chip);
         });
+      }
+    });
+    // 监听时间范围选择
+    document.addEventListener('DOMContentLoaded', function() {
+      const rangeSel = document.getElementById('rangeSelect');
+      if (rangeSel) {
+        rangeSel.addEventListener('change', renderWeekly);
       }
     });
   }
@@ -171,13 +340,21 @@
       const d = new Date(s.date + 'T00:00:00');
       const card = document.createElement('div');
       card.className = `plan-card cat-${s.category}`;
+      let typeLabel = '';
+      if (s.repeat && s.repeat > 1) {
+        typeLabel = '<span class="type-tag type-long">长期</span>';
+      } else if (s.period && s.period !== 'none') {
+        typeLabel = '<span class="type-tag type-cycle">周期</span>';
+      } else {
+        typeLabel = '<span class="type-tag type-temp">临时</span>';
+      }
       card.innerHTML = `
         <div class="plan-date-block">
           <div class="plan-month">${MONTH_NAMES[d.getMonth()]}</div>
           <div class="plan-day">${d.getDate()}</div>
         </div>
         <div class="plan-info">
-          <h3>${escHtml(s.title)}</h3>
+          <h3>${typeLabel}${escHtml(s.title)}</h3>
           <div class="plan-meta">
             <span>${DAY_NAMES[d.getDay()]}</span>
             ${s.startTime ? `<span>🕐 ${s.startTime}${s.endTime ? ' – ' + s.endTime : ''}</span>` : ''}

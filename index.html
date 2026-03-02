@@ -16,6 +16,35 @@
         <button class="nav-btn" data-view="future">未来计划</button>
         <button class="nav-btn" data-view="add">添加日程</button>
       </nav>
+      <button id="settingsBtn" class="settings-btn" title="设置">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="11" cy="11" r="9" stroke="#4f6ef7" stroke-width="2" fill="#fff"/>
+          <path d="M11 7.5V11L13.5 13.5" stroke="#4f6ef7" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="11" cy="11" r="1.5" fill="#4f6ef7"/>
+        </svg>
+      </button>
+    </div>
+    <!-- 设置弹窗 -->
+    <div class="modal-overlay" id="settingsOverlay">
+      <div class="modal settings-modal">
+        <div class="modal-header">
+          <h3>API 设置</h3>
+          <button class="modal-close" id="settingsClose">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="apiUrl">API 地址</label>
+            <input type="text" id="apiUrl" placeholder="https://api.example.com/v1/chat" />
+          </div>
+          <div class="form-group">
+            <label for="apiKey">API-KEY</label>
+            <input type="password" id="apiKey" placeholder="请输入API-KEY" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" id="saveApiSettings">保存</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -24,7 +53,13 @@
     <!-- 本周日程视图 -->
     <section id="view-weekly" class="view active">
       <div class="section-header">
-        <h2>本周日程表</h2>
+        <h2>日程表</h2>
+        <select id="rangeSelect" class="range-select">
+          <option value="week" selected>本周</option>
+          <option value="nextweek">下周</option>
+          <option value="2weeks">近两周</option>
+          <option value="30days">近30天</option>
+        </select>
         <span class="week-label" id="weekLabel"></span>
       </div>
       <div class="weekly-grid" id="weeklyGrid">
@@ -50,6 +85,15 @@
         <h2>添加日程</h2>
       </div>
       <form class="add-form" id="addForm">
+                <div class="form-group">
+                  <label for="batchImport">批量导入日程（每行一个，格式见下）</label>
+                  <textarea id="batchImport" rows="4" placeholder="2026-03-05 09:00-10:00 会议 工作 高 需准备材料\n2026-03-06 18:00-20:00 聚餐 社交 中 ..."></textarea>
+                  <button type="button" class="btn btn-secondary" id="batchImportBtn" style="margin-top:8px;">批量导入</button>
+                  <div class="import-tip" style="font-size:0.85em;color:#888;margin-top:4px;">
+                    格式：日期 [开始-结束] 标题 分类 优先级 [备注]，如：<br>
+                    2026-03-05 09:00-10:00 会议 工作 高 需准备材料
+                  </div>
+                </div>
         <div class="form-row">
           <div class="form-group">
             <label for="schedulePeriod">周期类型</label>
