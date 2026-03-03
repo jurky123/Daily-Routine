@@ -1,3 +1,29 @@
+/* 登录弹窗表单统一风格 */
+#loginOverlay .form-group input[type="text"],
+#loginOverlay .form-group input[type="password"] {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.93rem;
+  color: var(--text);
+  background: var(--bg);
+  transition: border-color 0.2s;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+#loginOverlay .form-group input[type="text"]:focus,
+#loginOverlay .form-group input[type="password"]:focus {
+  border-color: var(--primary);
+  background: #fff;
+}
+#loginOverlay .form-group label {
+  margin-bottom: 7px;
+  display: block;
+  font-weight: 500;
+  color: var(--text);
+}
 #apiKey, #apiUrl {
   width: 100%;
   padding: 10px 14px;

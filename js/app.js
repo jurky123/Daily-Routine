@@ -5,6 +5,7 @@
           }
         // 当前账号
         let currentUser = '';
+        let memorySchedules = [];
 
         // 登录弹窗逻辑
         document.addEventListener('DOMContentLoaded', function() {
@@ -47,7 +48,10 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
-              }).then(res => res.json()).then(data => {
+              }).then(res => {
+                if (!res.ok) throw new Error('网络错误');
+                return res.json();
+              }).then(data => {
                 if (data.success) {
                   currentUser = username;
                   currentUserSpan.textContent = '当前账号：' + username;
@@ -59,7 +63,37 @@
                 } else {
                   alert(data.error || '登录失败');
                 }
-              }).catch(() => alert('网络错误'));
+              }).catch(e => {
+                if (e.message === '网络错误') alert('网络错误');
+              });
+            });
+          }
+          // 注册入口
+          const registerBtn = document.getElementById('registerBtn');
+          if (registerBtn) {
+            registerBtn.addEventListener('click', function() {
+              const username = loginUsername.value.trim();
+              const password = loginPassword.value.trim();
+              if (!username) {
+                alert('请输入用户名');
+                return;
+              }
+              fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+              }).then(res => {
+                if (!res.ok) throw new Error('网络错误');
+                return res.json();
+              }).then(data => {
+                if (data.success) {
+                  showToast('注册成功，请登录');
+                } else {
+                  alert(data.error || '注册失败');
+                }
+              }).catch(e => {
+                if (e.message === '网络错误') alert('网络错误');
+              });
             });
           }
         });
@@ -205,46 +239,27 @@
 
   // ── 数据层 ────────────────────────────────────────────
   function loadSchedules() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    } catch (_) {
-      return [];
-    }
-    }
-  
-    // 通过API按账号加载日程
-    function loadSchedules() {
-      if (!currentUser) return;
-      fetch('/api/load', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: currentUser })
-      }).then(res => res.json()).then(data => {
-        if (data.success && Array.isArray(data.data)) {
-          memorySchedules = data.data;
-          renderSchedules();
-        } else {
-          memorySchedules = [];
-          renderSchedules();
-        }
-      });
-    }
+    return memorySchedules;
+  }
 
   function saveSchedules(list) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
     memorySchedules = Array.isArray(list) ? list : [];
-        // 保存到后端API
-        if (!currentUser) return;
-        fetch('/api/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: currentUser, data: memorySchedules })
-        }).then(res => res.json()).then(data => {
-          if (!data.success) {
-            showToast('保存失败');
-          }
-        });
-        }
+    if (!currentUser) return;
+    fetch('/api/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser, data: memorySchedules })
+    }).then(res => {
+      if (!res.ok) throw new Error('网络错误');
+      return res.json();
+    }).then(data => {
+      if (!data.success) {
+        showToast('保存失败');
+      }
+    }).catch(e => {
+      if (e.message === '网络错误') showToast('网络错误');
+    });
+}
 
   function addSchedule(item) {
     if (!currentUser) return;
@@ -261,7 +276,7 @@
   }
 
   function getScheduleById(id) {
-    return loadSchedules().find(s => s.id === id) || null;
+    return memorySchedules.find(s => s.id === id) || null;
   }
 
   // ── 日期工具 ──────────────────────────────────────────
@@ -643,7 +658,7 @@
   // ── 初始化 ────────────────────────────────────────────
   function init() {
     // 注入示例数据（若为首次访问）
-    if (loadSchedules().length === 0) {
+    if (memorySchedules.length === 0) {
       const td = toDateStr(today());
       const nextWeek = new Date(today());
       nextWeek.setDate(nextWeek.getDate() + 3);
