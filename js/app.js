@@ -1,3 +1,84 @@
+          function importSchedules(list) {
+            if (!currentUser || !Array.isArray(list)) return;
+            memorySchedules = memorySchedules.concat(list);
+            saveSchedules(memorySchedules);
+          }
+        // 当前账号
+        let currentUser = '';
+
+        // 登录弹窗逻辑
+        document.addEventListener('DOMContentLoaded', function() {
+          const loginBtn = document.getElementById('loginBtn');
+          const loginOverlay = document.getElementById('loginOverlay');
+          const loginClose = document.getElementById('loginClose');
+          const loginConfirm = document.getElementById('loginConfirm');
+          const loginUsername = document.getElementById('loginUsername');
+          const loginPassword = document.getElementById('loginPassword');
+          const currentUserSpan = document.getElementById('currentUser');
+
+          // 显示弹窗
+          if (loginBtn && loginOverlay) {
+            loginBtn.addEventListener('click', function() {
+              loginOverlay.classList.add('open');
+            });
+          }
+          // 关闭弹窗
+          if (loginClose && loginOverlay) {
+            loginClose.addEventListener('click', function() {
+              loginOverlay.classList.remove('open');
+            });
+          }
+          if (loginOverlay) {
+            loginOverlay.addEventListener('click', function(e) {
+              if (e.target === loginOverlay) loginOverlay.classList.remove('open');
+            });
+          }
+          // 登录确认
+          if (loginConfirm) {
+            loginConfirm.addEventListener('click', function() {
+              const username = loginUsername.value.trim();
+              const password = loginPassword.value.trim();
+              if (!username) {
+                alert('请输入用户名');
+                return;
+              }
+              // 登录API
+              fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+              }).then(res => res.json()).then(data => {
+                if (data.success) {
+                  currentUser = username;
+                  currentUserSpan.textContent = '当前账号：' + username;
+                  currentUserSpan.style.display = '';
+                  loginOverlay.classList.remove('open');
+                  showToast('登录成功');
+                  // 登录后加载数据
+                  loadUserSchedules();
+                } else {
+                  alert(data.error || '登录失败');
+                }
+              }).catch(() => alert('网络错误'));
+            });
+          }
+        });
+
+        // 加载当前账号日程
+        function loadUserSchedules() {
+          if (!currentUser) return;
+          fetch('/api/load', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser })
+          }).then(res => res.json()).then(data => {
+            if (Array.isArray(data.data)) {
+              memorySchedules = data.data;
+              renderWeekly();
+              renderFuture();
+            }
+          });
+        }
       // 设置弹窗逻辑
       document.addEventListener('DOMContentLoaded', function() {
         const settingsBtn = document.getElementById('settingsBtn');
@@ -123,89 +204,60 @@
   const PRI_LABELS  = { high:'高', medium:'中', low:'低' };
 
   // ── 数据层 ────────────────────────────────────────────
-
-  // 内存数据存储
-  let memorySchedules = [];
   function loadSchedules() {
-    return memorySchedules;
-  }
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    } catch (_) {
+      return [];
+    }
+    }
+  
+    // 通过API按账号加载日程
+    function loadSchedules() {
+      if (!currentUser) return;
+      fetch('/api/load', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: currentUser })
+      }).then(res => res.json()).then(data => {
+        if (data.success && Array.isArray(data.data)) {
+          memorySchedules = data.data;
+          renderSchedules();
+        } else {
+          memorySchedules = [];
+          renderSchedules();
+        }
+      });
+    }
+
   function saveSchedules(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
     memorySchedules = Array.isArray(list) ? list : [];
-  }
-  // 导出/导入数据逻辑
-  document.addEventListener('DOMContentLoaded', function() {
-    // 导出
-    const exportBtn = document.getElementById('exportDataBtn');
-    if (exportBtn) {
-      exportBtn.addEventListener('click', function() {
-        const data = JSON.stringify(loadSchedules(), null, 2);
-        const blob = new Blob([data], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'daily-routine-data.json';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, 100);
-      });
-    }
-    // 导入弹窗
-    const importBtn = document.getElementById('importDataBtn');
-    const importOverlay = document.getElementById('importOverlay');
-    const importClose = document.getElementById('importClose');
-    const importFile = document.getElementById('importFile');
-    const importConfirm = document.getElementById('importConfirm');
-    if (importBtn && importOverlay) {
-      importBtn.addEventListener('click', function() {
-        importOverlay.classList.add('open');
-      });
-    }
-    if (importClose && importOverlay) {
-      importClose.addEventListener('click', function() {
-        importOverlay.classList.remove('open');
-      });
-    }
-    if (importOverlay) {
-      importOverlay.addEventListener('click', function(e) {
-        if (e.target === importOverlay) importOverlay.classList.remove('open');
-      });
-    }
-    if (importConfirm && importFile) {
-      importConfirm.addEventListener('click', function() {
-        const file = importFile.files[0];
-        if (!file) return alert('请选择JSON文件');
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          try {
-            const arr = JSON.parse(e.target.result);
-            if (!Array.isArray(arr)) throw new Error('格式错误');
-            saveSchedules(arr);
-            renderWeekly();
-            renderFuture();
-            importOverlay.classList.remove('open');
-            showToast('导入成功');
-          } catch (err) {
-            alert('导入失败：' + err.message);
+        // 保存到后端API
+        if (!currentUser) return;
+        fetch('/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: currentUser, data: memorySchedules })
+        }).then(res => res.json()).then(data => {
+          if (!data.success) {
+            showToast('保存失败');
           }
-        };
-        reader.readAsText(file);
-      });
-    }
-  });
+        });
+        }
 
   function addSchedule(item) {
-    const list = loadSchedules();
+    if (!currentUser) return;
     item.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-    list.push(item);
-    saveSchedules(list);
+    // 直接本地更新并API保存
+    memorySchedules.push(item);
+    saveSchedules(memorySchedules);
   }
 
   function deleteSchedule(id) {
-    const list = loadSchedules().filter(s => s.id !== id);
-    saveSchedules(list);
+    if (!currentUser) return;
+    memorySchedules = memorySchedules.filter(s => s.id !== id);
+    saveSchedules(memorySchedules);
   }
 
   function getScheduleById(id) {
@@ -438,10 +490,10 @@
   }
   // 标记日程完成
   function markScheduleDone(id) {
-    const list = loadSchedules();
-    const idx = list.findIndex(s => s.id === id);
+    if (!currentUser) return;
+    const idx = memorySchedules.findIndex(s => s.id === id);
     if (idx === -1) return;
-    const s = list[idx];
+    const s = memorySchedules[idx];
     if (s.repeat && s.repeat > 1) {
       s.doneCount = (s.doneCount || 0) + 1;
       if (s.doneCount >= s.repeat) {
@@ -450,7 +502,7 @@
     } else {
       s.done = true;
     }
-    saveSchedules(list);
+    saveSchedules(memorySchedules);
     renderWeekly();
     renderFuture();
     showToast('已标记为完成');
@@ -590,23 +642,25 @@
 
   // ── 初始化 ────────────────────────────────────────────
   function init() {
-    // 注入示例数据（首次访问）
+    // 注入示例数据（若为首次访问）
     if (loadSchedules().length === 0) {
       const td = toDateStr(today());
       const nextWeek = new Date(today());
       nextWeek.setDate(nextWeek.getDate() + 3);
       const futureDate = toDateStr(nextWeek);
+
       const twoWeeks = new Date(today());
       twoWeeks.setDate(twoWeeks.getDate() + 10);
       const futureDate2 = toDateStr(twoWeeks);
-      memorySchedules = [
-        { title: '晨跑', date: td, startTime: '07:00', endTime: '07:45', category: 'health', priority: 'medium', note: '公园跑步 5km', period: 'none', repeat: 1, doneCount: 0, done: false },
-        { title: '团队站会', date: td, startTime: '09:30', endTime: '10:00', category: 'work', priority: 'high', note: '同步本周工作进展', period: 'none', repeat: 1, doneCount: 0, done: false },
-        { title: '阅读《深度工作》', date: td, startTime: '21:00', endTime: '22:00', category: 'study', priority: 'low', note: '', period: 'none', repeat: 1, doneCount: 0, done: false },
-        { title: '季度复盘会议', date: futureDate, startTime: '14:00', endTime: '16:00', category: 'work', priority: 'high', note: '准备Q1数据报告', period: 'none', repeat: 1, doneCount: 0, done: false },
-        { title: '朋友聚餐', date: futureDate, startTime: '18:30', endTime: '21:00', category: 'social', priority: 'medium', note: '老友叙旧', period: 'none', repeat: 1, doneCount: 0, done: false },
-        { title: '健身房月卡续费', date: futureDate2, startTime: '', endTime: '', category: 'health', priority: 'low', note: '', period: 'none', repeat: 1, doneCount: 0, done: false },
-      ];
+
+      [
+        { title: '晨跑', date: td, startTime: '07:00', endTime: '07:45', category: 'health', priority: 'medium', note: '公园跑步 5km' },
+        { title: '团队站会', date: td, startTime: '09:30', endTime: '10:00', category: 'work', priority: 'high', note: '同步本周工作进展' },
+        { title: '阅读《深度工作》', date: td, startTime: '21:00', endTime: '22:00', category: 'study', priority: 'low', note: '' },
+        { title: '季度复盘会议', date: futureDate, startTime: '14:00', endTime: '16:00', category: 'work', priority: 'high', note: '准备Q1数据报告' },
+        { title: '朋友聚餐', date: futureDate, startTime: '18:30', endTime: '21:00', category: 'social', priority: 'medium', note: '老友叙旧' },
+        { title: '健身房月卡续费', date: futureDate2, startTime: '', endTime: '', category: 'health', priority: 'low', note: '' },
+      ].forEach(addSchedule);
     }
 
     renderWeekly();
